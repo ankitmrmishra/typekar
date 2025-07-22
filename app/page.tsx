@@ -12,10 +12,10 @@ export default function Home() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [start, setStart] = useState(0);
   const [end, setEnd] = useState(50);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [endTime, setEndTime] = useState<number | null>(null);
 
   const router = useRouter();
-
-  // Load a sliced paragraph
   const randomIndex = Math.floor(Math.random() * texts.length);
   const radnom_paragraph = texts[randomIndex];
   const initial_para = radnom_paragraph
@@ -31,6 +31,9 @@ export default function Home() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const { key } = event;
+      if (!startTime) {
+        setStartTime(Date.now());
+      }
 
       if (key === " ") {
         event.preventDefault();
@@ -63,11 +66,20 @@ export default function Home() {
 
   useEffect(() => {
     if (completedWords.length >= end) {
-      router.push("/result");
+      setEndTime(Date.now());
     }
 
     console.log("this is chanfing");
   }, [completedWords]);
+
+  let wpm = 0;
+  let accuracy = 0;
+
+  if (startTime && endTime) {
+    const durationInMinutes = (endTime - startTime) / 1000 / 60;
+    wpm = Math.round(correctWords.length / durationInMinutes);
+    accuracy = Math.round((correctWords.length / completedWords.length) * 100);
+  }
 
   return (
     <div className="bg-black text-white w-screen h-screen flex justify-around items-center align-middle flex-col">
@@ -96,49 +108,64 @@ export default function Home() {
           <div>Correct words: {correctWords.length}</div>
         </div>
 
-        <div className={cn("text-xl tracking-widest max-w-5xl leading-[3rem]")}>
-          {actualWords.map((word, wordIndex) => (
-            <span key={wordIndex} className="mr-2 inline-block">
-              {word.split("").map((char, charIndex) => {
-                let userChar = "";
+        {endTime ? (
+          <div className="mt-6 p-4 rounded-xl text-center shadow-lg">
+            <h2 className="text-2xl font-bold mb-2 text-white">Your Results</h2>
+            <p className="text-xl text-white">
+              WPM: <span className="text-green-400">{wpm}</span>
+            </p>
+            <p className="text-xl text-white">
+              Accuracy: <span className="text-blue-400">{accuracy}%</span>
+            </p>
+          </div>
+        ) : (
+          <div
+            className={cn("text-xl tracking-widest max-w-5xl leading-[3rem]")}
+          >
+            {actualWords.map((word, wordIndex) => (
+              <span key={wordIndex} className="mr-2 inline-block">
+                {word.split("").map((char, charIndex) => {
+                  let userChar = "";
 
-                if (wordIndex < completedWords.length) {
-                  userChar = completedWords[wordIndex][charIndex] || "";
-                } else if (wordIndex === completedWords.length) {
-                  userChar = currentWordInput[charIndex] || "";
-                }
-
-                let charState: "correct" | "incorrect" | "untyped" = "untyped";
-
-                if (userChar) {
-                  if (userChar === char) {
-                    charState = "correct";
-                  } else {
-                    charState = "incorrect";
+                  if (wordIndex < completedWords.length) {
+                    userChar = completedWords[wordIndex][charIndex] || "";
+                  } else if (wordIndex === completedWords.length) {
+                    userChar = currentWordInput[charIndex] || "";
                   }
-                }
 
-                const isCurrent =
-                  wordIndex === completedWords.length &&
-                  charIndex === currentWordInput.length;
+                  let charState: "correct" | "incorrect" | "untyped" =
+                    "untyped";
 
-                return (
-                  <span
-                    key={charIndex}
-                    className={cn({
-                      "text-white underline": isCurrent,
-                      "text-green-500": charState === "correct" && !isCurrent,
-                      "text-red-500": charState === "incorrect" && !isCurrent,
-                      "text-gray-700": charState === "untyped" && !isCurrent,
-                    })}
-                  >
-                    {char}
-                  </span>
-                );
-              })}
-            </span>
-          ))}
-        </div>
+                  if (userChar) {
+                    if (userChar === char) {
+                      charState = "correct";
+                    } else {
+                      charState = "incorrect";
+                    }
+                  }
+
+                  const isCurrent =
+                    wordIndex === completedWords.length &&
+                    charIndex === currentWordInput.length;
+
+                  return (
+                    <span
+                      key={charIndex}
+                      className={cn({
+                        "text-white underline": isCurrent,
+                        "text-green-500": charState === "correct" && !isCurrent,
+                        "text-red-500": charState === "incorrect" && !isCurrent,
+                        "text-gray-700": charState === "untyped" && !isCurrent,
+                      })}
+                    >
+                      {char}
+                    </span>
+                  );
+                })}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
