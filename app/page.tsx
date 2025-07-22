@@ -61,8 +61,6 @@ export default function Home() {
     (word, i) => word === actualWords[i]
   );
 
-  // console.log(completedWords);
-
   useEffect(() => {
     if (completedWords.length >= end) {
       router.push("/result");
@@ -128,11 +126,10 @@ export default function Home() {
                   <span
                     key={charIndex}
                     className={cn({
-                      "text-green-500": charState === "correct",
-                      "text-red-500": charState === "incorrect",
-                      "text-white": isCurrent,
-
-                      "text-gray-700": charState === "untyped",
+                      "text-white underline": isCurrent,
+                      "text-green-500": charState === "correct" && !isCurrent,
+                      "text-red-500": charState === "incorrect" && !isCurrent,
+                      "text-gray-700": charState === "untyped" && !isCurrent,
                     })}
                   >
                     {char}
