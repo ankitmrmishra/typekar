@@ -3,6 +3,7 @@
 import texts from "@/lib/texts.json";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { redirect, useRouter } from "next/navigation";
 
 export default function Home() {
   const [paragraph, setParagraph] = useState<string>();
@@ -11,6 +12,8 @@ export default function Home() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [start, setStart] = useState(0);
   const [end, setEnd] = useState(50);
+
+  const router = useRouter();
 
   // Load a sliced paragraph
   const randomIndex = Math.floor(Math.random() * texts.length);
@@ -58,6 +61,16 @@ export default function Home() {
     (word, i) => word === actualWords[i]
   );
 
+  // console.log(completedWords);
+
+  useEffect(() => {
+    if (completedWords.length >= end) {
+      router.push("/result");
+    }
+
+    console.log("this is chanfing");
+  }, [completedWords]);
+
   return (
     <div className="bg-black text-white w-screen h-screen flex justify-around items-center align-middle flex-col">
       {/* Word count selector */}
@@ -79,14 +92,12 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Display area */}
       <div className="flex flex-col text-start justify-center align-middle items-center">
         <div className="text-3xl">
           {completedWords.length}/{end}
           <div>Correct words: {correctWords.length}</div>
         </div>
 
-        {/* Render paragraph with per-letter coloring */}
         <div className={cn("text-xl tracking-widest max-w-5xl leading-[3rem]")}>
           {actualWords.map((word, wordIndex) => (
             <span key={wordIndex} className="mr-2 inline-block">
