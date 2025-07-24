@@ -30,6 +30,7 @@ export default function Home() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (endTime) return;
       const { key } = event;
       if (!startTime) {
         setStartTime(Date.now());
@@ -56,7 +57,7 @@ export default function Home() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentWordInput]);
+  }, [currentWordInput, endTime, startTime]);
 
   const actualWords = paragraph?.split(" ") || [];
 
@@ -65,7 +66,7 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (completedWords.length >= end) {
+    if (completedWords.length >= end && !endTime) {
       setEndTime(Date.now());
     }
 
@@ -81,6 +82,15 @@ export default function Home() {
     accuracy = Math.round((correctWords.length / completedWords.length) * 100);
   }
 
+  const resetTest = (newEnd: number) => {
+    setEnd(newEnd);
+    setCompletedWords([]);
+    setCurrentWordInput("");
+    setCurrentWordIndex(0);
+    setStartTime(null);
+    setEndTime(null);
+  };
+
   return (
     <div className="bg-black text-white w-screen h-screen flex justify-around items-center align-middle flex-col">
       {/* Word count selector */}
@@ -90,12 +100,7 @@ export default function Home() {
           <div
             key={num}
             className=" p-1 rounded-sm hover:cursor-pointer hover:text-orange-500"
-            onClick={() => {
-              setEnd(num);
-              setCompletedWords([]);
-              setCurrentWordInput("");
-              setCurrentWordIndex(0);
-            }}
+            onClick={() => resetTest(num)}
           >
             {num}
           </div>
@@ -103,11 +108,6 @@ export default function Home() {
       </div>
 
       <div className="flex flex-col text-start justify-center align-middle items-center">
-        <div className="text-3xl">
-          {completedWords.length}/{end}
-          <div>Correct words: {correctWords.length}</div>
-        </div>
-
         {endTime ? (
           <div className="mt-6 p-4 rounded-xl text-center shadow-lg">
             <h2 className="text-2xl font-bold mb-2 text-white">Your Results</h2>
@@ -122,6 +122,10 @@ export default function Home() {
           <div
             className={cn("text-xl tracking-widest max-w-5xl leading-[3rem]")}
           >
+            <div className="text-3xl">
+              {completedWords.length}/{end}
+              <div>Correct words: {correctWords.length}</div>
+            </div>
             {actualWords.map((word, wordIndex) => (
               <span key={wordIndex} className="mr-2 inline-block">
                 {word.split("").map((char, charIndex) => {
