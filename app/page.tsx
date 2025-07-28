@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useTypingTest } from "@/hooks/useTypingTest";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useRef, useLayoutEffect, useState } from "react";
 
 export default function Home() {
   // Use the custom hook to manage typing test logic
@@ -23,6 +24,42 @@ export default function Home() {
   const isMobile = useIsMobile();
   const router = useRouter();
 
+  // --- Smooth vertical scroll logic ---
+  const WORDS_BLOCK_SIZE = 1000; // Number of words to render in the block
+  const VISIBLE_LINES = 4;
+  const LINE_HEIGHT_REM = 2.5; // Should match the line height in rem (e.g., text-3xl leading-relaxed)
+  const LINE_HEIGHT_PX = 40; // fallback for JS calculation if needed
+
+  // Calculate the current line based on the current word's position
+  const wordsBefore = actualWords.slice(0, currentWordIndex);
+  // Create a dummy element to measure line breaks
+  const blockRef = useRef<HTMLDivElement>(null);
+  const [lineIndex, setLineIndex] = useState(0);
+
+  // Calculate the current line index by measuring the offsetTop of the current word
+  useLayoutEffect(() => {
+    if (!blockRef.current) return;
+    const currentWordElem = blockRef.current.querySelector(
+      '[data-current-word="true"]'
+    ) as HTMLElement;
+    if (currentWordElem && blockRef.current) {
+      // Calculate which line the current word is on
+      const blockTop = blockRef.current.getBoundingClientRect().top;
+      const wordTop = currentWordElem.getBoundingClientRect().top;
+      const offset = wordTop - blockTop;
+      const line = Math.round(offset / LINE_HEIGHT_PX);
+      setLineIndex(line);
+    }
+  }, [currentWordIndex]);
+
+  // Only render a block of words for performance
+  const blockStart = 0;
+  const blockEnd = Math.min(actualWords.length, WORDS_BLOCK_SIZE);
+  const blockWords = actualWords.slice(blockStart, blockEnd);
+
+  // Calculate the vertical offset for smooth scroll
+  const translateY = -(lineIndex * LINE_HEIGHT_REM) + "rem";
+
   if (isMobile) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-black text-white">
@@ -37,18 +74,6 @@ export default function Home() {
       </div>
     );
   }
-
-  // Vertical sliding window logic for lines
-  const WORDS_PER_LINE = 10;
-  const VISIBLE_LINES = 3;
-  const currentLine = Math.floor(currentWordIndex / WORDS_PER_LINE);
-  // Split words into lines
-  const lines = [];
-  for (let i = 0; i < actualWords.length; i += WORDS_PER_LINE) {
-    lines.push(actualWords.slice(i, i + WORDS_PER_LINE));
-  }
-  // Only show the current line and the next two
-  const visibleLines = lines.slice(currentLine, currentLine + VISIBLE_LINES);
 
   return (
     <div className="min-h-screen w-full bg-black text-white">
@@ -140,64 +165,68 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Typing Area - 3 lines, vertical sliding */}
+            {/* Typing Area - smooth vertical scroll */}
             <div
-              className=" p-10 bg-black"
-              style={{ height: "20.5em", width: "80em", overflow: "" }}
+              className="border border-white/10 p-10 bg-black overflow-hidden"
+              style={{ height: `${VISIBLE_LINES * LINE_HEIGHT_REM * 2}rem` }}
             >
-              <div className="flex flex-col justify-center gap-2 font-mono text-3xl leading-relaxed tracking-wide select-none">
-                {visibleLines.map((line, lineIdx) => (
-                  <div key={lineIdx} className="flex gap-4">
-                    {line.map((word, wordIdx) => {
-                      const wordIndex =
-                        (currentLine + lineIdx) * WORDS_PER_LINE + wordIdx;
-                      return (
-                        <span key={wordIndex} className="inline-block">
-                          {word.split("").map((char, charIndex) => {
-                            let userChar = "";
-                            // Determine which character to compare
-                            if (wordIndex < completedWords.length) {
-                              userChar =
-                                completedWords[wordIndex][charIndex] || "";
-                            } else if (wordIndex === completedWords.length) {
-                              userChar = currentWordInput[charIndex] || "";
-                            }
-                            // Set character state for coloring
-                            let charState: "correct" | "incorrect" | "untyped" =
-                              "untyped";
-                            if (userChar) {
-                              if (userChar === char) {
-                                charState = "correct";
-                              } else {
-                                charState = "incorrect";
-                              }
-                            }
-                            // Highlight the current character being typed
-                            const isCurrent =
-                              wordIndex === completedWords.length &&
-                              charIndex === currentWordInput.length;
-                            return (
-                              <span
-                                key={charIndex}
-                                className={cn("", {
-                                  "text-white bg-white/20": isCurrent,
-                                  "text-white":
-                                    charState === "correct" && !isCurrent,
-                                  "text-white/30 bg-white/10":
-                                    charState === "incorrect" && !isCurrent,
-                                  "text-white/30":
-                                    charState === "untyped" && !isCurrent,
-                                })}
-                              >
-                                {char}
-                              </span>
-                            );
-                          })}
-                        </span>
-                      );
-                    })}
-                  </div>
-                ))}
+              <div
+                ref={blockRef}
+                className="font-mono text-3xl leading-relaxed tracking-wide select-none flex flex-wrap gap-x-4 gap-y-2 transition-transform duration-300"
+                style={{ transform: `translateY(${translateY})` }}
+              >
+                {blockWords.map((word, wordIndex) => {
+                  const globalWordIndex = blockStart + wordIndex;
+                  const isCurrentWord = globalWordIndex === currentWordIndex;
+                  return (
+                    <span
+                      key={globalWordIndex}
+                      data-current-word={isCurrentWord ? "true" : undefined}
+                      className="inline-block"
+                    >
+                      {word.split("").map((char, charIndex) => {
+                        let userChar = "";
+                        // Determine which character to compare
+                        if (globalWordIndex < completedWords.length) {
+                          userChar =
+                            completedWords[globalWordIndex][charIndex] || "";
+                        } else if (globalWordIndex === completedWords.length) {
+                          userChar = currentWordInput[charIndex] || "";
+                        }
+                        // Set character state for coloring
+                        let charState: "correct" | "incorrect" | "untyped" =
+                          "untyped";
+                        if (userChar) {
+                          if (userChar === char) {
+                            charState = "correct";
+                          } else {
+                            charState = "incorrect";
+                          }
+                        }
+                        // Highlight the current character being typed
+                        const isCurrent =
+                          globalWordIndex === completedWords.length &&
+                          charIndex === currentWordInput.length;
+                        return (
+                          <span
+                            key={charIndex}
+                            className={cn({
+                              "text-white bg-white/20": isCurrent,
+                              "text-white":
+                                charState === "correct" && !isCurrent,
+                              "text-white/30 bg-white/10":
+                                charState === "incorrect" && !isCurrent,
+                              "text-white/30":
+                                charState === "untyped" && !isCurrent,
+                            })}
+                          >
+                            {char}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  );
+                })}
               </div>
             </div>
 
