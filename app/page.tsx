@@ -21,15 +21,25 @@ export default function Home() {
 
   const router = useRouter();
 
+  // Vertical sliding window logic for lines
+  const WORDS_PER_LINE = 10;
+  const VISIBLE_LINES = 3;
+  const currentLine = Math.floor(currentWordIndex / WORDS_PER_LINE);
+  // Split words into lines
+  const lines = [];
+  for (let i = 0; i < actualWords.length; i += WORDS_PER_LINE) {
+    lines.push(actualWords.slice(i, i + WORDS_PER_LINE));
+  }
+  // Only show the current line and the next two
+  const visibleLines = lines.slice(currentLine, currentLine + VISIBLE_LINES);
+
   return (
     <div className="min-h-screen w-full bg-black text-white">
       {/* Header */}
       <div className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between">
-            <div className="text-2xl font-light tracking-wider">
-              TYPING TEST
-            </div>
+            <div className="text-2xl font-light tracking-wider">TypeKar</div>
             <div className="flex items-center gap-8">
               <span className="text-sm font-medium tracking-wide text-white/60">
                 WORDS
@@ -113,53 +123,63 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Typing Area */}
-            <div className="border border-white/10 p-12">
-              <div className="font-mono text-3xl leading-relaxed tracking-wide select-none">
-                {actualWords.map((word, wordIndex) => (
-                  <span key={wordIndex} className="mr-6 inline-block">
-                    {word.split("").map((char, charIndex) => {
-                      let userChar = "";
-                      // Determine which character to compare
-                      if (wordIndex < completedWords.length) {
-                        userChar = completedWords[wordIndex][charIndex] || "";
-                      } else if (wordIndex === completedWords.length) {
-                        userChar = currentWordInput[charIndex] || "";
-                      }
-
-                      // Set character state for coloring
-                      let charState: "correct" | "incorrect" | "untyped" =
-                        "untyped";
-                      if (userChar) {
-                        if (userChar === char) {
-                          charState = "correct";
-                        } else {
-                          charState = "incorrect";
-                        }
-                      }
-
-                      // Highlight the current character being typed
-                      const isCurrent =
-                        wordIndex === completedWords.length &&
-                        charIndex === currentWordInput.length;
-
+            {/* Typing Area - 3 lines, vertical sliding */}
+            <div
+              className=" p-10 bg-black"
+              style={{ height: "20.5em", width: "80em", overflow: "" }}
+            >
+              <div className="flex flex-col justify-center gap-2 font-mono text-3xl leading-relaxed tracking-wide select-none">
+                {visibleLines.map((line, lineIdx) => (
+                  <div key={lineIdx} className="flex gap-4">
+                    {line.map((word, wordIdx) => {
+                      const wordIndex =
+                        (currentLine + lineIdx) * WORDS_PER_LINE + wordIdx;
                       return (
-                        <span
-                          key={charIndex}
-                          className={cn({
-                            "text-white bg-white/20": isCurrent,
-                            "text-white": charState === "correct" && !isCurrent,
-                            "text-white/30 bg-white/10":
-                              charState === "incorrect" && !isCurrent,
-                            "text-white/30":
-                              charState === "untyped" && !isCurrent,
+                        <span key={wordIndex} className="inline-block">
+                          {word.split("").map((char, charIndex) => {
+                            let userChar = "";
+                            // Determine which character to compare
+                            if (wordIndex < completedWords.length) {
+                              userChar =
+                                completedWords[wordIndex][charIndex] || "";
+                            } else if (wordIndex === completedWords.length) {
+                              userChar = currentWordInput[charIndex] || "";
+                            }
+                            // Set character state for coloring
+                            let charState: "correct" | "incorrect" | "untyped" =
+                              "untyped";
+                            if (userChar) {
+                              if (userChar === char) {
+                                charState = "correct";
+                              } else {
+                                charState = "incorrect";
+                              }
+                            }
+                            // Highlight the current character being typed
+                            const isCurrent =
+                              wordIndex === completedWords.length &&
+                              charIndex === currentWordInput.length;
+                            return (
+                              <span
+                                key={charIndex}
+                                className={cn("", {
+                                  "text-white bg-white/20": isCurrent,
+                                  "text-white":
+                                    charState === "correct" && !isCurrent,
+                                  "text-white/30 bg-white/10":
+                                    charState === "incorrect" && !isCurrent,
+                                  "text-white/30":
+                                    charState === "untyped" && !isCurrent,
+                                })}
+                              >
+                                {char}
+                              </span>
+                            );
                           })}
-                        >
-                          {char}
                         </span>
                       );
                     })}
-                  </span>
+                  </div>
                 ))}
               </div>
             </div>
