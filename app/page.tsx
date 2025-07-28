@@ -2,6 +2,7 @@
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useTypingTest } from "@/hooks/useTypingTest";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export default function Home() {
   // Use the custom hook to manage typing test logic
@@ -19,7 +20,23 @@ export default function Home() {
     resetTest,
   } = useTypingTest();
 
+  const isMobile = useIsMobile();
   const router = useRouter();
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-black text-white">
+        <div className="text-center space-y-4">
+          <div className="text-3xl font-bold tracking-wide">
+            Please use a desktop for the best experience.
+          </div>
+          <div className="text-lg text-white/60">
+            This typing test is optimized for desktop screens.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Vertical sliding window logic for lines
   const WORDS_PER_LINE = 10;

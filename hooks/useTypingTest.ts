@@ -28,7 +28,7 @@ import texts from "@/lib/texts.json";
  * @property {number} accuracy - Typing accuracy as a percentage
  * @property {function} resetTest - Function to reset the test with a new word count
  */
-export function useTypingTest(defaultWordCount: number = 50) {
+export function useTypingTest(defaultWordCount: number = 200) {
   // The paragraph to be typed by the user
   const [paragraph, setParagraph] = useState<string>("");
   // The current word being typed
