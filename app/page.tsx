@@ -101,6 +101,25 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+              {/* Auth Buttons */}
+              <div className="flex gap-3 ml-8">
+                <button
+                  className="px-6 py-2 border border-white/20 rounded-full text-sm font-semibold tracking-wide transition-all duration-200 hover:border-white hover:bg-white hover:text-black focus:outline-none focus:ring-2 focus:ring-white/40"
+                  onClick={() => {
+                    /* TODO: handle sign in */
+                  }}
+                >
+                  Sign In
+                </button>
+                <button
+                  className="px-6 py-2 border border-orange-400 bg-orange-400 text-black rounded-full text-sm font-semibold tracking-wide transition-all duration-200 hover:bg-orange-500 hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400/40"
+                  onClick={() => {
+                    /* TODO: handle sign up */
+                  }}
+                >
+                  Sign Up
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -167,7 +186,7 @@ export default function Home() {
 
             {/* Typing Area - smooth vertical scroll */}
             <div
-              className="border border-white/10 p-10 bg-black overflow-hidden"
+              className=" p-10 bg-black overflow-hidden"
               style={{ height: `${VISIBLE_LINES * LINE_HEIGHT_REM * 2}rem` }}
             >
               <div
