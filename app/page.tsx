@@ -1,12 +1,41 @@
 "use client";
+/**
+ * @file app/page.tsx
+ * @description The main entry point and primary UI component for the TypeKar application.
+ * @version 1.0.0
+ * @author [Ankit Mishra]
+ *
+ * @see {@link useTypingTest} for the core typing logic.
+ * @see {@link useIsMobile} for device detection.
+ *
+ * This component is responsible for:
+ * 1. Rendering the main layout, including the header and typing/results area.
+ * 2. Integrating the `useTypingTest` hook to manage game state.
+ * 3. Implementing the smooth vertical scrolling feature for the typing text.
+ * 4. Handling the mobile keyboard visibility quirk by using a hidden input field.
+ * 5. Conditionally rendering the typing interface or the results screen.
+ */
+
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 import { useTypingTest } from "@/hooks/useTypingTest";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useRef, useLayoutEffect, useState } from "react";
+import { useRef, useLayoutEffect, useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
+/**
+ * The main page component for the TypeKar application.
+ * It orchestrates the entire typing test experience from start to finish.
+ * @returns {React.ReactElement} The rendered Home page component.
+ */
 export default function Home() {
-  // Use the custom hook to manage typing test logic
+  // =================================================================================
+  // I. STATE AND HOOKS INTEGRATION
+  // =================================================================================
+
+  /**
+   * Core typing test logic is managed by this custom hook.
+   * It provides all necessary state and functions for the game.
+   */
   const {
     paragraph,
     currentWordInput,
@@ -21,143 +50,142 @@ export default function Home() {
     resetTest,
   } = useTypingTest();
 
+  /**
+   * Custom hook to detect if the user is on a mobile device.
+   */
   const isMobile = useIsMobile();
-  const router = useRouter();
 
-  // --- Smooth vertical scroll logic ---
-  const WORDS_BLOCK_SIZE = 1000; // Number of words to render in the block
-  const VISIBLE_LINES = 4;
-  const LINE_HEIGHT_REM = 2.5; // Should match the line height in rem (e.g., text-3xl leading-relaxed)
-  const LINE_HEIGHT_PX = 40; // fallback for JS calculation if needed
+  /**
+   * Ref for the hidden input element. This is the key to ensuring the virtual
+   * keyboard appears on mobile devices, which do not show a keyboard unless
+   * an input field is focused.
+   */
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Calculate the current line based on the current word's position
-  const wordsBefore = actualWords.slice(0, currentWordIndex);
-  // Create a dummy element to measure line breaks
+  /**
+   * Ref for the div containing the words. Used to calculate the position of the
+   * current word for the smooth scrolling effect.
+   */
   const blockRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * State for the current line index the user is on.
+   * This is used to calculate the `translateY` value for the scroll effect.
+   * @type {[number, React.Dispatch<React.SetStateAction<number>>]}
+   */
   const [lineIndex, setLineIndex] = useState(0);
 
-  // Calculate the current line index by measuring the offsetTop of the current word
+  // =================================================================================
+  // II. UI LOGIC AND EFFECTS
+  // =================================================================================
+
+  // --- Smooth Vertical Scroll Logic ---
+  const WORDS_BLOCK_SIZE = 1000; // Max words to render to prevent performance issues.
+  const VISIBLE_LINES = 4; // The number of lines visible in the typing area.
+  const LINE_HEIGHT_REM = 2.5; // Corresponds to `leading-relaxed` on a `text-3xl`.
+  const LINE_HEIGHT_PX = 40; // Pixel fallback for calculation.
+
+  /**
+   * `useLayoutEffect` is used here to prevent visual flicker. It runs synchronously
+   * after the DOM has been mutated but before the browser has painted. This ensures
+   * that the scroll position is calculated and applied in the same frame, creating
+   * a seamless scrolling experience.
+   */
   useLayoutEffect(() => {
     if (!blockRef.current) return;
+
     const currentWordElem = blockRef.current.querySelector(
       '[data-current-word="true"]'
     ) as HTMLElement;
-    if (currentWordElem && blockRef.current) {
-      // Calculate which line the current word is on
+
+    if (currentWordElem) {
       const blockTop = blockRef.current.getBoundingClientRect().top;
       const wordTop = currentWordElem.getBoundingClientRect().top;
       const offset = wordTop - blockTop;
-      const line = Math.round(offset / LINE_HEIGHT_PX);
+      // Calculate the current line based on the element's position.
+      const line = Math.floor(offset / LINE_HEIGHT_PX);
       setLineIndex(line);
+    } else {
+      // If the current word element isn't found (e.g., after a test reset),
+      // ensure the scroll position is reset to the top.
+      setLineIndex(0);
     }
-  }, [currentWordIndex]);
+  }, [currentWordIndex, actualWords]); // Re-calculate when the word or text changes.
 
-  // Only render a block of words for performance
+  // Sliced words to render, improving performance for very long paragraphs.
   const blockStart = 0;
   const blockEnd = Math.min(actualWords.length, WORDS_BLOCK_SIZE);
   const blockWords = actualWords.slice(blockStart, blockEnd);
 
-  // Calculate the vertical offset for smooth scroll
+  // The CSS `transform` value to apply for the scrolling effect.
   const translateY = -(lineIndex * LINE_HEIGHT_REM) + "rem";
 
-  if (isMobile) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-black text-white">
-        <div className="text-center space-y-4">
-          <div className="text-3xl font-bold tracking-wide">
-            Please use a desktop for the best experience.
-          </div>
-          <div className="text-lg text-white/60">
-            This typing test is optimized for desktop screens.
-          </div>
-        </div>
-      </div>
-    );
-  }
+  /**
+   * Effect to manage the focus of the hidden input field.
+   * This is crucial for user experience, especially on mobile.
+   */
+  useEffect(() => {
+    // We always want the input to be focused so the user can start typing.
+    inputRef.current?.focus();
+  }, [isMobile, endTime]); // Refocus when view changes (e.g., test ends).
+
+  // =================================================================================
+  // III. RENDER LOGIC
+  // =================================================================================
 
   return (
-    <div className="min-h-screen w-full bg-black text-white">
-      {/* Header */}
-      <div className="border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="text-2xl font-light tracking-wider">TypeKar</div>
-            <div className="flex items-center gap-8">
-              <span className="text-sm font-medium tracking-wide text-white/60">
-                WORDS
-              </span>
-              <div className="flex gap-2">
-                {[10, 30, 70].map((num) => (
-                  <button
-                    key={num}
-                    className={cn(
-                      "w-12 h-12 border border-white/20 text-sm font-medium tracking-wide transition-all duration-200",
-                      "hover:border-white hover:bg-white hover:text-black",
-                      end === num ? "border-white bg-white text-black" : ""
-                    )}
-                    onClick={() => resetTest(num)}
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
-              {/* Auth Buttons */}
-              <div className="flex gap-3 ml-8">
-                <button
-                  className="px-6 py-2 border border-white/20 rounded-full text-sm font-semibold tracking-wide transition-all duration-200 hover:border-white hover:bg-white hover:text-black focus:outline-none focus:ring-2 focus:ring-white/40"
-                  onClick={() => {
-                    /* TODO: handle sign in */
-                  }}
-                >
-                  Sign In
-                </button>
-                <button
-                  className="px-6 py-2 border border-orange-400 bg-orange-400 text-black rounded-full text-sm font-semibold tracking-wide transition-all duration-200 hover:bg-orange-500 hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400/40"
-                  onClick={() => {
-                    /* TODO: handle sign up */
-                  }}
-                >
-                  Sign Up
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div
+      className="min-h-screen w-full bg-black text-white"
+      // The entire page is clickable to focus the hidden input, which
+      // brings up the keyboard on mobile if it was dismissed.
+      onClick={() => inputRef.current?.focus()}
+    >
+      <input
+        ref={inputRef}
+        type="text"
+        className="absolute top-[-9999px] left-[-9999px] opacity-0"
+        autoFocus
+      />
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-8 py-16">
+      {/* Header Section */}
+
+      {/* Main Content: Conditionally renders Test or Results */}
+      <div className="max-w-7xl mx-auto px-2 md:px-8 py-8 md:py-16">
         {endTime ? (
           // Results View
-          <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            <div className="text-center space-y-12">
-              <div className="space-y-4">
-                <h1 className="text-6xl font-light tracking-wider">RESULTS</h1>
-                <div className="w-24 h-px bg-white mx-auto"></div>
+          <div className="flex flex-col items-center justify-center min-h-[40vh] md:min-h-[60vh]">
+            <div className="text-center space-y-8 md:space-y-12">
+              <div className="space-y-2 md:space-y-4">
+                <h1 className="text-4xl md:text-6xl font-light tracking-wider">
+                  RESULTS
+                </h1>
+                <div className="w-16 md:w-24 h-px bg-white mx-auto"></div>
               </div>
-
-              <div className="grid grid-cols-2 gap-16">
-                <div className="text-center space-y-2">
-                  <div className="text-5xl font-light tracking-wider">
+              <div className="grid grid-cols-2 gap-8 md:gap-16">
+                <div className="text-center space-y-1 md:space-y-2">
+                  <div className="text-3xl md:text-5xl font-light tracking-wider">
                     {wpm}
                   </div>
-                  <div className="text-sm font-medium tracking-widest text-white/60">
+                  <div className="text-xs md:text-sm font-medium tracking-widest text-white/60">
                     WORDS PER MINUTE
                   </div>
                 </div>
-                <div className="text-center space-y-2">
-                  <div className="text-5xl font-light tracking-wider">
+                <div className="text-center space-y-1 md:space-y-2">
+                  <div className="text-3xl md:text-5xl font-light tracking-wider">
                     {accuracy}%
                   </div>
-                  <div className="text-sm font-medium tracking-widest text-white/60">
+                  <div className="text-xs md:text-sm font-medium tracking-widest text-white/60">
                     ACCURACY
                   </div>
                 </div>
               </div>
-
               <button
-                className="px-12 py-4 border border-white/20 text-sm font-medium tracking-widest hover:border-white hover:bg-white hover:text-black transition-all duration-200"
-                onClick={() => resetTest(end)}
+                className="px-8 md:px-12 py-3 md:py-4 border border-white/20 text-xs md:text-sm font-medium tracking-widest hover:border-white hover:bg-white hover:text-black transition-all duration-200"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  resetTest(end);
+                  setLineIndex(0); // Reset scroll on restart as well.
+                }}
               >
                 RESTART TEST
               </button>
@@ -165,10 +193,33 @@ export default function Home() {
           </div>
         ) : (
           // Typing Interface
-          <div className="space-y-12">
-            {/* Progress Bar */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm font-medium tracking-wide">
+          <div className="space-y-8 md:space-y-12">
+            <div className="space-y-2 md:space-y-4">
+              <span className="text-xs md:text-sm font-medium tracking-wide text-white/60 hidden md:inline-block">
+                WORDS
+              </span>
+              <div className="flex gap-2">
+                {[10, 30, 70].map((num) => (
+                  <button
+                    key={num}
+                    className={cn(
+                      "w-10 h-10 md:w-12 md:h-12 border border-white/20 text-xs md:text-sm font-medium tracking-wide transition-all duration-200",
+                      "hover:border-white hover:bg-white hover:text-black",
+                      end === num ? "border-white bg-white text-black" : ""
+                    )}
+                    onClick={(e) => {
+                      // Stop propagation to prevent the parent div's onClick from firing,
+                      // which could interfere with the reset logic.
+                      e.stopPropagation();
+                      resetTest(num);
+                      setLineIndex(0); // CRITICAL: Reset scroll position on test change.
+                    }}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between items-center text-xs md:text-sm font-medium tracking-wide">
                 <span className="text-white/60">
                   PROGRESS: {completedWords.length} / {end}
                 </span>
@@ -183,15 +234,13 @@ export default function Home() {
                 ></div>
               </div>
             </div>
-
-            {/* Typing Area - smooth vertical scroll */}
             <div
-              className=" p-10 bg-black overflow-hidden"
+              className="border border-white/10 p-4 md:p-10 bg-black overflow-hidden cursor-text"
               style={{ height: `${VISIBLE_LINES * LINE_HEIGHT_REM * 2}rem` }}
             >
               <div
                 ref={blockRef}
-                className="font-mono text-3xl leading-relaxed tracking-wide select-none flex flex-wrap gap-x-4 gap-y-2 transition-transform duration-300"
+                className="font-mono text-xl md:text-3xl leading-relaxed tracking-wide select-none flex flex-wrap gap-x-2 md:gap-x-4 gap-y-1 md:gap-y-2 transition-transform duration-300"
                 style={{ transform: `translateY(${translateY})` }}
               >
                 {blockWords.map((word, wordIndex) => {
@@ -205,24 +254,20 @@ export default function Home() {
                     >
                       {word.split("").map((char, charIndex) => {
                         let userChar = "";
-                        // Determine which character to compare
                         if (globalWordIndex < completedWords.length) {
                           userChar =
                             completedWords[globalWordIndex][charIndex] || "";
                         } else if (globalWordIndex === completedWords.length) {
                           userChar = currentWordInput[charIndex] || "";
                         }
-                        // Set character state for coloring
+
                         let charState: "correct" | "incorrect" | "untyped" =
                           "untyped";
                         if (userChar) {
-                          if (userChar === char) {
-                            charState = "correct";
-                          } else {
-                            charState = "incorrect";
-                          }
+                          charState =
+                            userChar === char ? "correct" : "incorrect";
                         }
-                        // Highlight the current character being typed
+
                         const isCurrent =
                           globalWordIndex === completedWords.length &&
                           charIndex === currentWordInput.length;
@@ -248,10 +293,8 @@ export default function Home() {
                 })}
               </div>
             </div>
-
-            {/* Instructions */}
             <div className="text-center">
-              <p className="text-sm font-medium tracking-wide text-white/40">
+              <p className="text-xs md:text-sm font-medium tracking-wide text-white/40">
                 START TYPING TO BEGIN THE TEST
               </p>
             </div>
