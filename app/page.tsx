@@ -1,32 +1,10 @@
 "use client";
-/**
- * @file app/page.tsx
- * @description The main entry point and primary UI component for the TypeKar application.
- * @version 1.0.0
- * @author [Ankit Mishra]
- *
- * @see {@link useTypingTest} for the core typing logic.
- * @see {@link useIsMobile} for device detection.
- *
- * This component is responsible for:
- * 1. Rendering the main layout, including the header and typing/results area.
- * 2. Integrating the `useTypingTest` hook to manage game state.
- * 3. Implementing the smooth vertical scrolling feature for the typing text.
- * 4. Handling the mobile keyboard visibility quirk by using a hidden input field.
- * 5. Conditionally rendering the typing interface or the results screen.
- */
 
 import { cn } from "@/lib/utils";
 import { useTypingTest } from "@/hooks/useTypingTest";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useRef, useLayoutEffect, useState, useEffect } from "react";
-import { motion } from "framer-motion";
 
-/**
- * The main page component for the TypeKar application.
- * It orchestrates the entire typing test experience from start to finish.
- * @returns {React.ReactElement} The rendered Home page component.
- */
 export default function Home() {
   // =================================================================================
   // I. STATE AND HOOKS INTEGRATION
@@ -37,7 +15,6 @@ export default function Home() {
    * It provides all necessary state and functions for the game.
    */
   const {
-    paragraph,
     currentWordInput,
     completedWords,
     currentWordIndex,
@@ -91,7 +68,7 @@ export default function Home() {
    * that the scroll position is calculated and applied in the same frame, creating
    * a seamless scrolling experience.
    */
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!blockRef.current) return;
 
     const currentWordElem = blockRef.current.querySelector(
@@ -146,8 +123,6 @@ export default function Home() {
         className="absolute top-[-9999px] left-[-9999px] opacity-0"
         autoFocus
       />
-
-      {/* Header Section */}
 
       {/* Main Content: Conditionally renders Test or Results */}
       <div className="max-w-7xl mx-auto px-2 md:px-8 py-8 md:py-16">
