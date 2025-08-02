@@ -251,9 +251,9 @@ export default function Home() {
                             key={charIndex}
                             className={cn({
                               "text-white bg-white/20": isCurrent,
-                              "text-white":
+                              "text-green-500":
                                 charState === "correct" && !isCurrent,
-                              "text-white/30 bg-white/10":
+                              "text-red-800/50 bg-red-200/10":
                                 charState === "incorrect" && !isCurrent,
                               "text-white/30":
                                 charState === "untyped" && !isCurrent,
